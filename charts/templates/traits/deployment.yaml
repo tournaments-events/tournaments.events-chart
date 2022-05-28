@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "charts.traits.fullname" . }}
+  labels:
+    {{- include "charts.traits.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.traits.autoscaling.enabled }}
+  replicas: {{ .Values.traits.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "charts.traits.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.traits.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "charts.traits.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with ( include "charts.imagePullSecrets" . ) }}
+      imagePullSecrets:
+        {{- . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "charts.traits.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.traits.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.traits.securityContext | nindent 12 }}
+          image: "{{ .Values.traits.image.repository }}:{{ .Values.traits.image.tag }}"
+          imagePullPolicy: {{ .Values.traits.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            {{- toYaml .Values.traits.resources | nindent 12 }}
+      {{- with .Values.traits.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.traits.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.traits.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
